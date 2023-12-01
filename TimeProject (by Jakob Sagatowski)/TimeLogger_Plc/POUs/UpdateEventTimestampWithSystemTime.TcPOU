@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+  <POU Name="UpdateEventTimestampWithSystemTime" Id="{de109766-8e59-4882-8690-fd8c87d01dbb}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION UpdateEventTimestampWithSystemTime
+VAR_INPUT
+	stEvent : REFERENCE TO ST_Event;
+END_VAR
+VAR
+	fbGETSYSTEMTIME : GETSYSTEMTIME;
+	stFileTime : T_FILETIME; // requires Tc2_Utilities
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// The function block writes on stFileTime (VAR_OUTPUT) in T_FILETIME format 
+fbGETSYSTEMTIME(timeLoDW => stFileTime.dwLowDateTime,
+				timeHiDW => stFileTime.dwHighDateTime);
+
+// Overwrites the Timestamp of stEvent using the FILETIME_TO_DT function
+stEvent.dtTimestamp := FILETIME_TO_DT(fileTime := stFileTime);
+]]></ST>
+    </Implementation>
+    <LineIds Name="UpdateEventTimestampWithSystemTime">
+      <LineId Id="26" Count="4" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="31" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

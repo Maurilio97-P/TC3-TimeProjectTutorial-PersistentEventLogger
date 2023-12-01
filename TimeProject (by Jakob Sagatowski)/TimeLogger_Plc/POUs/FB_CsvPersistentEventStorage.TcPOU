@@ -1,0 +1,177 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+  <POU Name="FB_CsvPersistentEventStorage" Id="{0ab77ab6-e9c9-486b-9f88-3419b9f172e3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_CsvPersistentEventStorage IMPLEMENTS I_PersistentEventStorage
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+
+VAR
+	// Instantiate FB to create/open file for editing
+	fbFileOpen : FB_FileOpen := (sPathName := 'C:\Events.log' , nMode := FOPEN_MODEAPPEND OR FOPEN_MODETEXT);
+	
+	// Instantiate FB to write into a file
+	fbFilePuts : FB_FilePuts;
+	
+	
+	// Instantiate FB to close the file
+	fbFileClose : FB_FileClose;
+	
+	
+	// create local ENUM for our State Machine
+	eWriteState : (FILE_OPEN_TRIGGER, FILE_OPEN,
+				                 WAIT_FOR_EVENT, 
+			   WRITE_EVENT_TRIGGER, WRITE_EVENT, 
+				 FILE_CLOSE_TRIGGER, FILE_CLOSE,
+										 ERROR); 
+	// Event to Write
+	stEventWrittenToFile : ST_Event;
+	
+	// Variable to store the STRING to write into the file
+	CsvString : T_MaxString; 	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE eWriteState OF
+	FILE_OPEN_TRIGGER : 
+		// send rising edge to request Windows to Open the File
+		fbFileOpen(bExecute := TRUE);
+		eWriteState := FILE_OPEN; // next step
+	
+	FILE_OPEN : 
+		fbFileOpen(bExecute := FALSE);
+		
+		// Error Detection from FB OUTPUT
+		IF fbFileOpen.bError THEN
+			eWriteState := ERROR;
+			
+		// Check if we are ready to Open with Busy Flag and File Handle
+		ELSIF NOT fbFileOpen.bBusy AND fbFileOpen.hFile <> 0 THEN
+			eWriteState := WAIT_FOR_EVENT; // next step
+			
+		END_IF
+	
+	WAIT_FOR_EVENT :
+		// Do nothing, we are waiting for the user to call us
+	
+	WRITE_EVENT_TRIGGER : 
+		// Convert ST_Event into a CSV String (use method)
+		CsvString := CreateCsvString(stEvent := stEventWrittenToFile);
+		
+		// send rising edge to request Windows to Write into the File
+		// then send CSV String and pass the File Handle
+		fbFilePuts(bExecute := TRUE,
+					sLine := CsvString, 
+					hFile := fbFileOpen.hFile);	
+		
+		eWriteState := WRITE_EVENT; // next step
+	
+	WRITE_EVENT : 
+		fbFilePuts(bExecute := FALSE);
+		
+		// Error Detection from FB OUTPUT
+		IF fbFilePuts.bError THEN
+			eWriteState := ERROR;
+		
+		// Check if we are ready to write with Busy Flag 
+		ELSIF NOT fbFilePuts.bBusy THEN
+			eWriteState := FILE_CLOSE_TRIGGER; // next step
+		END_IF
+	
+	FILE_CLOSE_TRIGGER : 
+		// send rising edge to request Windows to Close the File
+		// then pass the File Handle
+		fbFileClose(bExecute := TRUE,
+					hFile := fbFileOpen.hFile);	
+		
+		eWriteState := FILE_CLOSE; // next step
+	
+	FILE_CLOSE : 
+		fbFileClose(bExecute := FALSE);
+		
+		// Error Detection from FB OUTPUT
+		IF fbFileClose.bError THEN
+			eWriteState := ERROR;
+		
+		// Check if we are ready to close with Busy Flag 
+		ELSIF NOT fbFileClose.bBusy THEN
+			eWriteState := FILE_OPEN_TRIGGER; // restart state machine
+			
+		END_IF
+	
+	ERROR :
+		// Do nothing (for now)
+		
+END_CASE]]></ST>
+    </Implementation>
+    <Method Name="CreateCsvString" Id="{3fd66c46-3774-4c4f-acce-5f91f66546ea}">
+      <Declaration><![CDATA[METHOD PRIVATE CreateCsvString : T_MaxString
+VAR_INPUT
+	stEvent : REFERENCE TO ST_Event;	
+END_VAR
+
+VAR
+	TempString : T_MaxString; 
+	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[TempString := TO_STRING(stEvent.eEventType);
+TempString := CONCAT(STR1 := TempString, STR2 := ',');
+TempString := CONCAT(STR1 := TempString, STR2 := TO_STRING(stEvent.eEventSeverity));
+TempString := CONCAT(STR1 := TempString, STR2 := ',');
+TempString := CONCAT(STR1 := TempString, STR2 := TO_STRING(stEvent.nEventIdentity));
+TempString := CONCAT(STR1 := TempString, STR2 := ',');
+TempString := CONCAT(STR1 := TempString, STR2 := stEvent.sEvenText);
+TempString := CONCAT(STR1 := TempString, STR2 := ',');
+TempString := CONCAT(STR1 := TempString, STR2 := TO_STRING(stEvent.dtTimestamp));
+TempString := CONCAT(STR1 := TempString, STR2 := '$n');
+
+CreateCsvString := TempString; ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StoreEvent" Id="{5bf84965-704a-47ab-bd0a-573443519796}">
+      <Declaration><![CDATA[METHOD StoreEvent
+VAR_INPUT
+	stEvent	: ST_Event;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Here is where the CSV-writing will be done
+
+// Are we ready to Write? 
+IF eWriteState = WAIT_FOR_EVENT THEN
+	// Go to next step
+	eWriteState := WRITE_EVENT_TRIGGER;
+	// Take Event to Write from Input
+	stEventWrittenToFile := stEvent;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_CsvPersistentEventStorage">
+      <LineId Id="103" Count="0" />
+      <LineId Id="196" Count="42" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="239" Count="18" />
+      <LineId Id="261" Count="1" />
+      <LineId Id="258" Count="1" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="23" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CsvPersistentEventStorage.CreateCsvString">
+      <LineId Id="17" Count="10" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_CsvPersistentEventStorage.StoreEvent">
+      <LineId Id="7" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="23" Count="1" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="14" Count="1" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

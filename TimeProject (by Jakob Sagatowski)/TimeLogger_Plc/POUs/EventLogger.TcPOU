@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+  <POU Name="EventLogger" Id="{4748e6d4-fc75-4373-b774-684735cf28b8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK EventLogger
+VAR_INPUT
+	// inputs to the function block. 
+	// These are read-only, meaning you cannot modify their values within the block.
+END_VAR
+
+
+VAR_OUTPUT
+	// outputs from the function block. 
+	// The function block can modify the values of these 
+END_VAR
+
+
+VAR
+	// local to the function block and to its methods
+	// internal (instance) variables
+	
+	aEventBuffer : ARRAY[1..MAXIMUM_SIZE_OF_EVENT_BUFFER] OF ST_Event;
+	nCurrentEventBufferIndex : INT := 0;
+	
+	//Create local reference of our Interface
+	// FB_EventLogger USES I_PersistentEventStorage
+	_PersistentEventStorage : I_PersistentEventStorage;
+	
+END_VAR
+
+VAR CONSTANT
+	// local to the function block and to its methods
+	// these variables cannot be changed during program execution.
+	
+	MAXIMUM_SIZE_OF_EVENT_BUFFER : INT := 100;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="AddEvent" Id="{644044e2-a26b-4fd0-bc2c-39c5aa97f7a3}">
+      <Declaration><![CDATA[(* Returns TRUE if add was succesful and FALSE if buffer is full *)
+METHOD PUBLIC AddEvent : BOOL
+VAR_INPUT
+	// user input
+	eEventType : E_EventType; //user defined ENUM
+	eEventSeverity : TcEventSeverity; // library ENUM
+	nEventIdentity : UDINT;
+	sEvenText : STRING(255);
+	
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if the event buffer is full using a private method
+IF NOT IsEventBufferFull () THEN
+	
+	nCurrentEventBufferIndex := nCurrentEventBufferIndex + 1;
+	
+	// from user input, fill buffer
+	aEventBuffer[nCurrentEventBufferIndex].eEventType := eEventType;
+	aEventBuffer[nCurrentEventBufferIndex].eEventSeverity := eEventSeverity;
+	aEventBuffer[nCurrentEventBufferIndex].nEventIdentity := nEventIdentity;
+	aEventBuffer[nCurrentEventBufferIndex].sEvenText := sEvenText;
+	
+	// using our function, fill the date and time stamp
+	// input current event to the function
+	// updates only date and type stamp of the input event
+	UpdateEventTimestampWithSystemTime(stEvent := aEventBuffer[nCurrentEventBufferIndex]);
+	
+	AddEvent := TRUE; // add was succesful
+ELSE
+	AddEvent := FALSE; // buffer is full
+END_IF
+
+// Here we want to store the event persistently
+_PersistentEventStorage.StoreEvent(stEvent := aEventBuffer[nCurrentEventBufferIndex]);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{0a8f83a3-2f05-43d2-b6b5-3aa8d99613c9}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	// Making a reference to the Interface I_PersistentEventStorage
+	// This Interface is for Storing Events Persistently	
+	iPersistentEventStorage : I_PersistentEventStorage; 
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// store reference locally in the FB when FB_init method executes
+// this allows all methods in the FB to have access to it
+_PersistentEventStorage := iPersistentEventStorage;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="IsEventBufferFull" Id="{3f167cd7-7c49-4716-8ee6-7eb79bf96a8b}">
+      <Declaration><![CDATA[METHOD PRIVATE IsEventBufferFull : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if the event buffer is full
+IF (nCurrentEventBufferIndex + 1) > MAXIMUM_SIZE_OF_EVENT_BUFFER THEN
+	IsEventBufferFull := TRUE; //method returns TRUE, it is full
+ELSE 
+	IsEventBufferFull := FALSE; //method returns FALSE, it is not full
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="EventLogger">
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="EventLogger.AddEvent">
+      <LineId Id="18" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="27" Count="3" />
+      <LineId Id="35" Count="1" />
+      <LineId Id="38" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="52" Count="0" />
+    </LineIds>
+    <LineIds Name="EventLogger.FB_init">
+      <LineId Id="7" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+    </LineIds>
+    <LineIds Name="EventLogger.IsEventBufferFull">
+      <LineId Id="6" Count="4" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

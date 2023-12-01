@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+  <POU Name="MAIN" Id="{ded8080d-bcf1-4a1c-9c1e-7daeab7de6f8}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	// Boolean to execute the Eventlogger in one PLC cycle
+	bBoolean : BOOL := FALSE; 
+	
+	// Define sample values to the variables needed to add an Event
+	eEventType1 : E_EventType := E_EventType.Alarm; //user defined ENUM
+	eEventSeverity1 : TcEventSeverity := TcEventSeverity.Error; // library ENUM
+	nEventIdentity1 : UDINT := 42;
+	sEvenText1 : STRING(255) := 'This is a sample event';
+	
+	// Create an instance of the FB that defines the format for Persistent Event Storage
+	CsvPersistentEventStorage1 : FB_CsvPersistentEventStorage;
+	
+	// Create one instance of our FB EventLogger, and provide interface parameter for FB_init
+	EventLogger1 : EventLogger(CsvPersistentEventStorage1); 
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF bBoolean THEN
+	// Add an event (in one cycle of the PLC)
+	EventLogger1.AddEvent(eEventType1, eEventSeverity1, nEventIdentity1, sEvenText1); 
+	bBoolean := FALSE;
+END_IF
+
+// call instance every cycle
+CsvPersistentEventStorage1();
+]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="40" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="26" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
