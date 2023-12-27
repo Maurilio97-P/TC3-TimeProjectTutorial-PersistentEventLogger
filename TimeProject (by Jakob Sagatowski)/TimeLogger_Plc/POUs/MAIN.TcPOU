@@ -21,7 +21,8 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[IF bBoolean THEN
+      <ST><![CDATA[// Boolean to test our code
+IF bBoolean THEN
 	// Add an event (in one cycle of the PLC)
 	EventLogger1.AddEvent(eEventType1, eEventSeverity1, nEventIdentity1, sEvenText1); 
 	bBoolean := FALSE;
@@ -32,6 +33,7 @@ CsvPersistentEventStorage1();
 ]]></ST>
     </Implementation>
     <LineIds Name="MAIN">
+      <LineId Id="141" Count="0" />
       <LineId Id="40" Count="0" />
       <LineId Id="42" Count="0" />
       <LineId Id="45" Count="0" />
