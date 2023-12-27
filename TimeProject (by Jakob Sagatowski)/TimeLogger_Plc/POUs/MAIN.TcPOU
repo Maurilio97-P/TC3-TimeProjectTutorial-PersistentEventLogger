@@ -21,7 +21,7 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[// Boolean to test our code!
+      <ST><![CDATA[// Boolean to test our code once!
 IF bBoolean THEN
 	// Add an event (in one cycle of the PLC)
 	EventLogger1.AddEvent(eEventType1, eEventSeverity1, nEventIdentity1, sEvenText1); 
