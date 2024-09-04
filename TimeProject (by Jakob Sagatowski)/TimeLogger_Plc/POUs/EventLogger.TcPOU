@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="EventLogger" Id="{4748e6d4-fc75-4373-b774-684735cf28b8}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK EventLogger
 VAR_INPUT
@@ -52,7 +52,7 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[//Check if the event buffer is full using a private method
-IF NOT IsEventBufferFull () THEN
+IF NOT IsEventBufferFull() THEN
 	
 	nCurrentEventBufferIndex := nCurrentEventBufferIndex + 1;
 	

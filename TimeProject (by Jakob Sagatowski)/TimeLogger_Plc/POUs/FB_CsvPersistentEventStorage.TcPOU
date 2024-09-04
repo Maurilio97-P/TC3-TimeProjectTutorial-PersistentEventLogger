@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.10">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="FB_CsvPersistentEventStorage" Id="{0ab77ab6-e9c9-486b-9f88-3419b9f172e3}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_CsvPersistentEventStorage IMPLEMENTS I_PersistentEventStorage
 VAR_INPUT
@@ -35,72 +35,76 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[CASE eWriteState OF
-	FILE_OPEN_TRIGGER : 
-		// send rising edge to request Windows to Open the File
-		fbFileOpen(bExecute := TRUE);
-		eWriteState := FILE_OPEN; // next step
 	
-	FILE_OPEN : 
-		fbFileOpen(bExecute := FALSE);
-		
-		// Error Detection from FB OUTPUT
-		IF fbFileOpen.bError THEN
-			eWriteState := ERROR;
-			
-		// Check if we are ready to Open with Busy Flag and File Handle
-		ELSIF NOT fbFileOpen.bBusy AND fbFileOpen.hFile <> 0 THEN
-			eWriteState := WAIT_FOR_EVENT; // next step
-			
-		END_IF
-	
+(***********************    WAIT   ********************************)
 	WAIT_FOR_EVENT :
 		// Do nothing, we are waiting for the user to call us
-	
-	WRITE_EVENT_TRIGGER : 
-		// Convert ST_Event into a CSV String (use method)
-		CsvString := CreateCsvString(stEvent := stEventWrittenToFile);
 		
-		// send rising edge to request Windows to Write into the File
-		// then send CSV String and pass the File Handle
-		fbFilePuts(bExecute := TRUE,
-					sLine := CsvString, 
-					hFile := fbFileOpen.hFile);	
+
+(***********************    OPEN   ********************************)
+	FILE_OPEN_TRIGGER : 
+		fbFileOpen(bExecute := TRUE); // send rising edge to request Windows to Open the File
+		eWriteState := FILE_OPEN; // go next step
 		
-		eWriteState := WRITE_EVENT; // next step
-	
-	WRITE_EVENT : 
-		fbFilePuts(bExecute := FALSE);
 		
-		// Error Detection from FB OUTPUT
-		IF fbFilePuts.bError THEN
-			eWriteState := ERROR;
-		
-		// Check if we are ready to write with Busy Flag 
-		ELSIF NOT fbFilePuts.bBusy THEN
-			eWriteState := FILE_CLOSE_TRIGGER; // next step
-		END_IF
-	
-	FILE_CLOSE_TRIGGER : 
-		// send rising edge to request Windows to Close the File
-		// then pass the File Handle
-		fbFileClose(bExecute := TRUE,
-					hFile := fbFileOpen.hFile);	
-		
-		eWriteState := FILE_CLOSE; // next step
-	
-	FILE_CLOSE : 
-		fbFileClose(bExecute := FALSE);
-		
-		// Error Detection from FB OUTPUT
-		IF fbFileClose.bError THEN
-			eWriteState := ERROR;
-		
-		// Check if we are ready to close with Busy Flag 
-		ELSIF NOT fbFileClose.bBusy THEN
-			eWriteState := FILE_OPEN_TRIGGER; // restart state machine
+	FILE_OPEN : 
+		IF fbFileOpen.bError THEN // Error Detection from FB OUTPUT
+			eWriteState := ERROR; // go to Error step
+			
+		ELSIF NOT fbFileOpen.bBusy AND fbFileOpen.hFile <> 0 THEN // Check if we are ready to Open (using Busy Flag and File Handle)
+			eWriteState := WRITE_EVENT_TRIGGER; // go to next step
 			
 		END_IF
+		
+		fbFileOpen(bExecute := FALSE);
+		
+
+
+(**********************    WRITE   ********************************)
+	WRITE_EVENT_TRIGGER : 
+		//eWriteState := FILE_OPEN_TRIGGER; // go to next step?? I think this is just a typo... ignore it for now?
+		
+		CsvString := CreateCsvString(stEvent := stEventWrittenToFile); // Convert ST_Event into a CSV String (use method)
+		
+		
+		
+		fbFilePuts(bExecute := TRUE,            // send rising edge to request Windows to Write into the File
+					sLine := CsvString,         // then send CSV String
+					hFile := fbFileOpen.hFile);	// and pass the File Handle
+		
+		eWriteState := WRITE_EVENT; // go to next step
+
+		
+	WRITE_EVENT : 
+		IF fbFilePuts.bError THEN // Error Detection from FB OUTPUT
+			eWriteState := ERROR; // go to Error step
+		
+		
+		ELSIF NOT fbFilePuts.bBusy THEN // Check if we are ready to write (check with Busy Flag) 
+			eWriteState := FILE_CLOSE_TRIGGER; // go to next step
+		END_IF
+		fbFilePuts(bExecute := FALSE);
+		
+(***********************    CLOSE   ********************************)	
+	FILE_CLOSE_TRIGGER : 
+		fbFileClose(bExecute := TRUE,           // send rising edge to request Windows to Close the File
+					hFile := fbFileOpen.hFile);	// then pass the File Handle
+		
+		eWriteState := FILE_CLOSE; // go to next step
 	
+		
+	FILE_CLOSE : 
+		IF fbFileClose.bError THEN // Error Detection from FB OUTPUT
+			eWriteState := ERROR; // go to Error step
+		
+		
+		ELSIF NOT fbFileClose.bBusy THEN // Check if we are ready to close (check with Busy Flag) 
+			eWriteState := WAIT_FOR_EVENT; // restart state machine and wait
+			
+		END_IF
+		fbFileClose(bExecute := FALSE);
+		
+(***********************    ERROR   ********************************)
 	ERROR :
 		// Do nothing (for now)
 		
@@ -151,10 +155,41 @@ END_IF]]></ST>
     </Method>
     <LineIds Name="FB_CsvPersistentEventStorage">
       <LineId Id="103" Count="0" />
-      <LineId Id="196" Count="42" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="315" Count="1" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="198" Count="1" />
+      <LineId Id="307" Count="1" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="205" Count="2" />
+      <LineId Id="209" Count="3" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="298" Count="1" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="217" Count="1" />
+      <LineId Id="318" Count="0" />
+      <LineId Id="219" Count="8" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="228" Count="1" />
+      <LineId Id="233" Count="5" />
       <LineId Id="260" Count="0" />
-      <LineId Id="239" Count="18" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="239" Count="1" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="244" Count="3" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="252" Count="5" />
       <LineId Id="261" Count="1" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="312" Count="0" />
       <LineId Id="258" Count="1" />
       <LineId Id="168" Count="0" />
       <LineId Id="195" Count="0" />
